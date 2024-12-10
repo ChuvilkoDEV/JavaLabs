@@ -25,7 +25,6 @@ import tech.reliab.course.ChuvilkoIR.bank.service.impl.EmployeeServiceImpl;
 import tech.reliab.course.ChuvilkoIR.bank.service.impl.PaymentAccountServiceImpl;
 import tech.reliab.course.ChuvilkoIR.bank.service.impl.UserServiceImpl;
 
-
 @SpringBootApplication
 public class Main {
     public static void main(String[] args) {
