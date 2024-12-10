@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import tech.reliab.course.ChuvilkoIR.bank.entity.Bank;
 import tech.reliab.course.ChuvilkoIR.bank.entity.CreditAccount;
 import tech.reliab.course.ChuvilkoIR.bank.entity.Employee;
@@ -14,19 +15,12 @@ import tech.reliab.course.ChuvilkoIR.bank.service.BankService;
 import tech.reliab.course.ChuvilkoIR.bank.service.CreditAccountService;
 import tech.reliab.course.ChuvilkoIR.bank.service.UserService;
 
+@RequiredArgsConstructor
 public class CreditAccountServiceImpl implements CreditAccountService {
-
     private static int creditAccountsCount = 0;
-
     private final UserService userService;
     private final BankService bankService;
-
     private List<CreditAccount> creditAccounts = new ArrayList<>();
-
-    public CreditAccountServiceImpl(UserService userService, BankService bankService) {
-        this.userService = userService;
-        this.bankService = bankService;
-    }
 
     public CreditAccount createCreditAccount(User user, Bank bank, LocalDate startDate, int loanTermMonths,
                                              double loanAmount, double interestRate, Employee employee,

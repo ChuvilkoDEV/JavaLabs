@@ -5,6 +5,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import tech.reliab.course.ChuvilkoIR.bank.entity.Bank;
 import tech.reliab.course.ChuvilkoIR.bank.entity.BankAtm;
 import tech.reliab.course.ChuvilkoIR.bank.entity.BankAtmStatusEnum;
@@ -15,17 +16,11 @@ import tech.reliab.course.ChuvilkoIR.bank.service.BankAtmService;
 import java.util.List;
 import tech.reliab.course.ChuvilkoIR.bank.service.BankService;
 
+@RequiredArgsConstructor
 public class BankAtmServiceImpl implements BankAtmService {
-
     private int bankAtmsCount = 0;
-
     private List<BankAtm> bankAtms = new ArrayList<>();
-
     private final BankService bankService;
-
-    public BankAtmServiceImpl(BankService bankService) {
-        this.bankService = bankService;
-    }
 
     public BankAtm createBankAtm(String name, String address, Bank bank, BankOffice location, Employee employee,
                                  boolean cashWithdrawal, boolean cashDeposit, double maintenanceCost) {
