@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16:///course
+    username: postgres
+    password: 10172003
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true

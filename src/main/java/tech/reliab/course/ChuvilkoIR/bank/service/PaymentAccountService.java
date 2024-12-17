@@ -1,48 +1,15 @@
 package tech.reliab.course.ChuvilkoIR.bank.service;
 
 import java.util.List;
-import java.util.Optional;
-import tech.reliab.course.ChuvilkoIR.bank.entity.Bank;
-import tech.reliab.course.ChuvilkoIR.bank.entity.PaymentAccount;
-import tech.reliab.course.ChuvilkoIR.bank.entity.User;
+import tech.reliab.course.ChuvilkoIR.bank.model.dto.PaymentAccountDTO;
+import tech.reliab.course.ChuvilkoIR.bank.model.entity.PaymentAccount;
+import tech.reliab.course.ChuvilkoIR.bank.model.request.PaymentAccountRequest;
 
 public interface PaymentAccountService {
-    /**
-     * Создание нового платежного аккаунта.
-     *
-     * @param user Пользователь, которому принадлежит аккаунт.
-     * @param bank Банк, в котором открыт аккаунт.
-     * @return Созданный платежный аккаунт.
-     */
-    PaymentAccount createPaymentAccount(User user, Bank bank);
-
-    /**
-     * Чтение платежного аккаунта по его идентификатору.
-     *
-     * @param id Идентификатор платежного аккаунта.
-     * @return Платежный аккаунт, если он найден, иначе - пустой Optional.
-     */
-    Optional<PaymentAccount> getPaymentAccountById(int id);
-
-    /**
-     * Чтение всех платежных аккаунтов.
-     *
-     * @return Список всех платежных аккаунтов.
-     */
-    List<PaymentAccount> getAllPaymentAccounts();
-
-    /**
-     * Обновление информации о платежном аккаунте по его идентификатору.
-     *
-     * @param id   Идентификатор платежного аккаунта.
-     * @param bank Банк, в котором открыт аккаунт.
-     */
-    void updatePaymentAccount(int id, Bank bank);
-
-    /**
-     * Удаление платежного аккаунта по его идентификатору.
-     *
-     * @param id Идентификатор платежного аккаунта.
-     */
-    void deletePaymentAccount(int id);
+    PaymentAccountDTO createPaymentAccount(PaymentAccountRequest paymentAccountRequest);
+    PaymentAccount getPaymentAccountById(long id);
+    PaymentAccountDTO getPaymentAccountDTOById(long id);
+    List<PaymentAccountDTO> getAllPaymentAccounts();
+    PaymentAccountDTO updatePaymentAccount(long id, long bankId);
+    void deletePaymentAccount(long id);
 }

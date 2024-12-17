@@ -1,34 +1,32 @@
 package tech.reliab.course.ChuvilkoIR.bank.service.impl;
 
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Random;
 import lombok.RequiredArgsConstructor;
-import tech.reliab.course.ChuvilkoIR.bank.entity.Bank;
+import org.springframework.stereotype.Service;
+import tech.reliab.course.ChuvilkoIR.bank.model.dto.BankDTO;
+import tech.reliab.course.ChuvilkoIR.bank.model.entity.Bank;
+import tech.reliab.course.ChuvilkoIR.bank.repository.BankRepository;
 import tech.reliab.course.ChuvilkoIR.bank.service.BankService;
 
 import java.util.List;
-import tech.reliab.course.ChuvilkoIR.bank.service.UserService;
 
+@Service
 @RequiredArgsConstructor
 public class BankServiceImpl implements BankService {
     private static final int RATING_BOUND = 101;
     private static final int TOTAL_MONEY_BOUND = 1000001;
     private static final int MAX_RATE = 20;
     private static final double DIVIDER = 10.0;
-    private int banksCount = 0;
-    private final UserService userService;
-    private List<Bank> banks = new ArrayList<>();
 
-    public Bank createBank(String bankName) {
+    private final BankRepository bankRepository;
+
+    public BankDTO createBank(String bankName) {
         Bank bank = new Bank(bankName);
-        bank.setId(banksCount++);
         bank.setRating(generateRating());
         bank.setTotalMoney(generateTotalMoney());
         bank.setInterestRate(calculateInterestRate(bank.getRating()));
-        banks.add(bank);
-        return bank;
+        return new BankDTO(bankRepository.save(bank));
     }
 
     /**
@@ -59,61 +57,30 @@ public class BankServiceImpl implements BankService {
         return MAX_RATE - (rating / DIVIDER);
     }
 
-    public Optional<Bank> getBankById(int id) {
-        return banks.stream()
-                .filter(bank -> bank.getId() == id)
-                .findFirst();
+    public Bank getBankById(long id) {
+        return bankRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Bank {" + id + "} was not found"));
     }
 
-    public List<Bank> getAllBanks() {
-        return new ArrayList<>(banks);
+    public BankDTO getBankDTOById(long id) {
+        return new BankDTO(getBankById(id));
     }
 
-    public void updateBank(int id, String name) {
-        Bank bank = getBankIfExists(id);
+    public List<BankDTO> getAllBanks() {
+        return bankRepository.findAll().stream().map(BankDTO::new).toList();
+    }
+
+    public BankDTO updateBank(long id, String name) {
+        Bank bank = getBankById(id);
         bank.setName(name);
+        return new BankDTO(bankRepository.save(bank));
     }
 
-    public void deleteBank(int id) {
-        Bank bank = getBankIfExists(id);
-        banks.remove(bank);
-        userService.deleteBank(bank);
+    public void deleteBank(long id) {
+        bankRepository.deleteById(id);
     }
 
 
-    public Bank getBankIfExists(int id) {
-        return getBankById(id).orElseThrow(() -> new NoSuchElementException("Bank was not found"));
-    }
-
-    public void addOffice(Bank bank) {
-        bank.setOfficeCount(bank.getOfficeCount() + 1);
-    }
-
-    public void addAtm(Bank bank) {
-        bank.setAtmCount(bank.getAtmCount() + 1);
-    }
-
-    public void addEmployee(Bank bank) {
-        bank.setEmployeeCount(bank.getEmployeeCount() + 1);
-    }
-
-    public void addClient(Bank bank) {
-        bank.setClientCount(bank.getClientCount() + 1);
-    }
-
-    public void removeOffice(Bank bank) {
-        bank.setOfficeCount(bank.getOfficeCount() - 1);
-    }
-
-    public void removeAtm(Bank bank) {
-        bank.setAtmCount(bank.getAtmCount() - 1);
-    }
-
-    public void removeEmployee(Bank bank) {
-        bank.setEmployeeCount(bank.getEmployeeCount() - 1);
-    }
-
-    public void removeClient(Bank bank) {
-        bank.setClientCount(bank.getClientCount() - 1);
+    public BankDTO getBankIfExists(long id) {
+        return new BankDTO(getBankById(id));
     }
 }

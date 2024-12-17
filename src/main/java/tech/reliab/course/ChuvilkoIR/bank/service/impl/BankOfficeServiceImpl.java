@@ -1,44 +1,41 @@
 package tech.reliab.course.ChuvilkoIR.bank.service.impl;
 
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Random;
 import lombok.RequiredArgsConstructor;
-import tech.reliab.course.ChuvilkoIR.bank.entity.Bank;
-import tech.reliab.course.ChuvilkoIR.bank.entity.BankOffice;
-import tech.reliab.course.ChuvilkoIR.bank.entity.BankOfficeStatusEnum;
+import org.springframework.stereotype.Service;
+import tech.reliab.course.ChuvilkoIR.bank.model.request.BankOfficeRequest;
+import tech.reliab.course.ChuvilkoIR.bank.model.dto.BankOfficeDTO;
+import tech.reliab.course.ChuvilkoIR.bank.model.entity.Bank;
+import tech.reliab.course.ChuvilkoIR.bank.model.entity.BankOffice;
+import tech.reliab.course.ChuvilkoIR.bank.model.enums.BankOfficeStatusEnum;
+import tech.reliab.course.ChuvilkoIR.bank.repository.BankOfficeRepository;
 import tech.reliab.course.ChuvilkoIR.bank.service.BankOfficeService;
 
 import java.util.List;
 import tech.reliab.course.ChuvilkoIR.bank.service.BankService;
 
+@Service
 @RequiredArgsConstructor
 public class BankOfficeServiceImpl implements BankOfficeService {
-    private int bankOfficesCount = 0;
-    private List<BankOffice> bankOffices = new ArrayList<>();
+    private final BankOfficeRepository bankOfficeRepository;
     private final BankService bankService;
 
-    public BankOffice createBankOffice(String name, String address, boolean canPlaceAtm,
-                                       boolean canIssueLoan, boolean cashWithdrawal, boolean cashDeposit,
-                                       double rentCost, Bank bank) {
-        BankOffice bankOffice = new BankOffice(name, address, canPlaceAtm, canIssueLoan,
-                cashWithdrawal, cashDeposit, rentCost);
-        bankOffice.setId(bankOfficesCount++);
-        bankOffice.setStatus(generateStatus());
-        bankOffice.setOfficeMoney(generateOfficeMoney(bank));
-        bankOffices.add(bankOffice);
-        bankService.addOffice(bank);
-        return bankOffice;
-    }
-
     /**
-     * Генерация случайного статуса офиса банка.
+     * Создание нового офиса банка.
      *
-     * @return Случайный статус офиса банка.
+     * @param bankOfficeRequest содержит данные про офис
+     * @return Созданный офис банка.
      */
-    private BankOfficeStatusEnum generateStatus() {
-        return BankOfficeStatusEnum.randomStatus();
+    public BankOfficeDTO createBankOffice(BankOfficeRequest bankOfficeRequest) {
+        Bank bank = bankService.getBankById(bankOfficeRequest.getBankId());
+        BankOffice bankOffice = new BankOffice(bankOfficeRequest.getName(), bankOfficeRequest.getAddress(),
+                bankOfficeRequest.isCanPlaceAtm(), bankOfficeRequest.isCanIssueLoan(),
+                bankOfficeRequest.isCashWithdrawal(), bankOfficeRequest.isCashDeposit(),
+                bankOfficeRequest.getRentCost(), bank);
+        bankOffice.setStatus(BankOfficeStatusEnum.randomStatus());
+        bankOffice.setOfficeMoney(generateOfficeMoney(bank));
+        return new BankOfficeDTO(bankOfficeRepository.save(bankOffice));
     }
 
     /**
@@ -51,36 +48,48 @@ public class BankOfficeServiceImpl implements BankOfficeService {
         return new Random().nextDouble(bank.getTotalMoney());
     }
 
-    public Optional<BankOffice> getBankOfficeById(int id) {
-        return bankOffices.stream()
-                .filter(bankOffice -> bankOffice.getId() == id)
-                .findFirst();
+    /**
+     * Поиск офиса банка по его идентификатору.
+     *
+     * @param id Идентификатор офиса банка.
+     * @return Офис банка, если он найден
+     * @throws NoSuchElementException Если офис не найден.
+     */
+    public BankOffice getBankOfficeById(long id) {
+        return bankOfficeRepository.findById(id).orElseThrow(() -> new NoSuchElementException("BankOffice was not found"));
     }
 
-    public List<BankOffice> getAllBankOffices() {
-        return new ArrayList<>(bankOffices);
-    }
-
-    public void updateBankOffice(int id, String name) {
-        BankOffice bankOffice = getBankOfficeIfExists(id);
-        bankOffice.setName(name);
-    }
-
-    public void deleteBankAtm(int officeId, int bankId) {
-        BankOffice bankOffice = getBankOfficeIfExists(officeId);
-        bankOffices.remove(bankOffice);
-        Bank bank = bankService.getBankIfExists(bankId);
-        bankService.removeOffice(bank);
+    public BankOfficeDTO getBankOfficeDTOById(long id) {
+        return new BankOfficeDTO(getBankOfficeById(id));
     }
 
     /**
-     * Получение офиса банка по его идентификатору, если он существует.
+     * Чтение всех офисов банка.
+     *
+     * @return Список всех офисов банка.
+     */
+    public List<BankOfficeDTO> getAllBankOffices() {
+        return bankOfficeRepository.findAll().stream().map(BankOfficeDTO::new).toList();
+    }
+
+    /**
+     * Обновление информации об офисе банка по его идентификатору.
+     *
+     * @param id   Идентификатор офиса банка.
+     * @param name Новое название офиса банка.
+     */
+    public BankOfficeDTO updateBankOffice(long id, String name) {
+        BankOffice bankOffice = getBankOfficeById(id);
+        bankOffice.setName(name);
+        return new BankOfficeDTO(bankOfficeRepository.save(bankOffice));
+    }
+
+    /**
+     * Удаление офиса банка по его идентификатору
      *
      * @param id Идентификатор офиса банка.
-     * @return Офис банка, если он найден.
-     * @throws NoSuchElementException Если офис банка не найден.
      */
-    private BankOffice getBankOfficeIfExists(int id) {
-        return getBankOfficeById(id).orElseThrow(() -> new NoSuchElementException("BankOffice was not found"));
+    public void deleteBankAtm(long id) {
+        bankOfficeRepository.deleteById(id);
     }
 }

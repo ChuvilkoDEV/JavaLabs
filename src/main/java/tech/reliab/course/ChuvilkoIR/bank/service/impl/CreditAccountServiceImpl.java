@@ -1,40 +1,48 @@
 package tech.reliab.course.ChuvilkoIR.bank.service.impl;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import tech.reliab.course.ChuvilkoIR.bank.entity.Bank;
-import tech.reliab.course.ChuvilkoIR.bank.entity.CreditAccount;
-import tech.reliab.course.ChuvilkoIR.bank.entity.Employee;
-import tech.reliab.course.ChuvilkoIR.bank.entity.PaymentAccount;
-import tech.reliab.course.ChuvilkoIR.bank.entity.User;
+import org.springframework.stereotype.Service;
+import tech.reliab.course.ChuvilkoIR.bank.model.request.CreditAccountRequest;
+import tech.reliab.course.ChuvilkoIR.bank.model.dto.CreditAccountDTO;
+import tech.reliab.course.ChuvilkoIR.bank.model.entity.Bank;
+import tech.reliab.course.ChuvilkoIR.bank.model.entity.CreditAccount;
+import tech.reliab.course.ChuvilkoIR.bank.repository.CreditAccountRepository;
 import tech.reliab.course.ChuvilkoIR.bank.service.BankService;
 import tech.reliab.course.ChuvilkoIR.bank.service.CreditAccountService;
+import tech.reliab.course.ChuvilkoIR.bank.service.EmployeeService;
+import tech.reliab.course.ChuvilkoIR.bank.service.PaymentAccountService;
 import tech.reliab.course.ChuvilkoIR.bank.service.UserService;
 
+@Service
 @RequiredArgsConstructor
 public class CreditAccountServiceImpl implements CreditAccountService {
-    private static int creditAccountsCount = 0;
-    private final UserService userService;
+    private final CreditAccountRepository creditAccountRepository;
     private final BankService bankService;
-    private List<CreditAccount> creditAccounts = new ArrayList<>();
+    private final UserService userService;
+    private final EmployeeService employeeService;
+    private final PaymentAccountService paymentAccountService;
 
-    public CreditAccount createCreditAccount(User user, Bank bank, LocalDate startDate, int loanTermMonths,
-                                             double loanAmount, double interestRate, Employee employee,
-                                             PaymentAccount paymentAccount) {
-        CreditAccount creditAccount = new CreditAccount(user, bank, startDate, loanTermMonths,
-                interestRate, employee, paymentAccount);
-        creditAccount.setId(creditAccountsCount++);
-        creditAccount.setEndDate(calculateEndDate(startDate, loanTermMonths));
-        creditAccount.setLoanAmount(calculateLoanAmount(loanAmount, bank));
-        creditAccount.setMonthlyPayment(calculateMonthlyPayment(interestRate, loanAmount, loanTermMonths));
-        creditAccount.setInterestRate(calculateInterestRate(interestRate, bank));
-        creditAccounts.add(creditAccount);
-        userService.addCreditAccount(creditAccount, user);
-        return creditAccount;
+    /**
+     * Создание нового кредитного аккаунта.
+     *
+     * @param creditAccountRequest данные аккаунта
+     * @return Созданный кредитный аккаунт.
+     */
+    public CreditAccountDTO createCreditAccount(CreditAccountRequest creditAccountRequest) {
+        CreditAccount creditAccount = new CreditAccount(userService.getUserById(creditAccountRequest.getUserId()),
+                bankService.getBankById(creditAccountRequest.getBankId()), creditAccountRequest.getStartDate(),
+                creditAccountRequest.getLoanTermMonths(), creditAccountRequest.getInterestRate(),
+                employeeService.getEmployeeById(creditAccountRequest.getEmployeeId()),
+                paymentAccountService.getPaymentAccountById(creditAccountRequest.getPaymentAccountId()));
+        creditAccount.setEndDate(calculateEndDate(creditAccountRequest.getStartDate(), creditAccountRequest.getLoanTermMonths()));
+        creditAccount.setLoanAmount(calculateLoanAmount(creditAccountRequest.getLoanAmount(), creditAccountRequest.getBankId()));
+        creditAccount.setMonthlyPayment(calculateMonthlyPayment(creditAccountRequest.getInterestRate(),
+                creditAccountRequest.getLoanAmount(), creditAccountRequest.getLoanTermMonths()));
+        creditAccount.setInterestRate(calculateInterestRate(creditAccountRequest.getInterestRate(), creditAccountRequest.getBankId()));
+        return new CreditAccountDTO(creditAccountRepository.save(creditAccount));
     }
 
     /**
@@ -65,10 +73,11 @@ public class CreditAccountServiceImpl implements CreditAccountService {
      * Расчет суммы кредита, не превышающей доступных средств банка.
      *
      * @param loanAmount Сумма кредита, запрошенная пользователем.
-     * @param bank      Банк, который предоставляет кредит.
+     * @param bankId      Банк, который предоставляет кредит.
      * @return Сумма кредита, не превышающая доступные средства банка.
      */
-    private double calculateLoanAmount(double loanAmount, Bank bank) {
+    private double calculateLoanAmount(double loanAmount, int bankId) {
+        Bank bank = bankService.getBankById(bankId);
         if (loanAmount > bank.getTotalMoney()) {
             loanAmount = bank.getTotalMoney();
         }
@@ -79,10 +88,11 @@ public class CreditAccountServiceImpl implements CreditAccountService {
      * Расчет процентной ставки по кредиту, не превышающей процентную ставку банка.
      *
      * @param interestRate Процентная ставка по кредиту, запрошенная пользователем.
-     * @param bank        Банк, который предоставляет кредит.
+     * @param bankId        Банк, который предоставляет кредит.
      * @return Процентная ставка по кредиту, не превышающая процентную ставку банка.
      */
-    private double calculateInterestRate(double interestRate, Bank bank) {
+    private double calculateInterestRate(double interestRate, int bankId) {
+        Bank bank = bankService.getBankById(bankId);
         if (interestRate > bank.getInterestRate()) {
             System.out.println("Заданная процентная ставка превышает процентную ставку банка. Ставка будет скорректирована.");
             interestRate = bank.getInterestRate();
@@ -90,36 +100,55 @@ public class CreditAccountServiceImpl implements CreditAccountService {
         return interestRate;
     }
 
-    public Optional<CreditAccount> getCreditAccountById(int id) {
-        return creditAccounts.stream()
-                .filter(creditAccount -> creditAccount.getId() == id)
-                .findFirst();
-    }
-
-    public List<CreditAccount> getAllCreditAccounts() {
-        return new ArrayList<>(creditAccounts);
-    }
-
-    public void updateCreditAccount(int id, Bank bank) {
-        CreditAccount creditAccount = getCreditAccountIfExists(id);
-        creditAccount.setBank(bank);
-    }
-
-    public void deleteCreditAccount(int accountId, int userId) {
-        CreditAccount creditAccount = getCreditAccountIfExists(accountId);
-        creditAccounts.remove(creditAccount);
-        User user = userService.getUserIfExists(userId);
-        userService.deleteCreditAccount(creditAccount, user);
+    /**
+     * Чтение кредитного аккаунта по его идентификатору.
+     *
+     * @param id Идентификатор кредитного аккаунта.
+     * @return Кредитный аккаунт, если он найден
+     * @throws NoSuchElementException Если кредитный аккаунт не найден.
+     */
+    public CreditAccount getCreditAccountById(long id) {
+        return creditAccountRepository.findById(id).orElseThrow(() -> new NoSuchElementException("CreditAccount was not found"));
     }
 
     /**
-     * Получение кредитного аккаунта по его идентификатору, если он существует.
+     * Чтение кредитного аккаунта по его идентификатору.
      *
      * @param id Идентификатор кредитного аккаунта.
-     * @return Кредитный аккаунт, если он найден.
+     * @return Кредитный аккаунт, если он найден
      * @throws NoSuchElementException Если кредитный аккаунт не найден.
      */
-    private CreditAccount getCreditAccountIfExists(int id) {
-        return getCreditAccountById(id).orElseThrow(() -> new NoSuchElementException("CreditAccount was not found"));
+    public CreditAccountDTO getCreditAccountDTOById(long id) {
+        return new CreditAccountDTO(getCreditAccountById(id));
+    }
+
+    /**
+     * Чтение всех кредитных аккаунтов.
+     *
+     * @return Список всех кредитных аккаунтов.
+     */
+    public List<CreditAccountDTO> getAllCreditAccounts() {
+        return creditAccountRepository.findAll().stream().map(CreditAccountDTO::new).toList();
+    }
+
+    /**
+     * Обновление информации о кредитном аккаунте по его идентификатору.
+     *
+     * @param id   Идентификатор кредитного аккаунта.
+     * @param bankId Банк, который предоставляет кредит.
+     */
+    public CreditAccountDTO updateCreditAccount(long id, long bankId) {
+        CreditAccount creditAccount = getCreditAccountById(id);
+        creditAccount.setBank(bankService.getBankById(bankId));
+        return new CreditAccountDTO(creditAccountRepository.save(creditAccount));
+    }
+
+    /**
+     * Удаление кредитного аккаунта по его идентификатору
+     *
+     * @param id Идентификатор кредитного аккаунта.
+     */
+    public void deleteCreditAccount(long id) {
+        creditAccountRepository.deleteById(id);
     }
 }

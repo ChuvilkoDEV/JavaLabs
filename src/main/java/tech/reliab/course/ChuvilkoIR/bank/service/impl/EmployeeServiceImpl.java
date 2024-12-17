@@ -1,53 +1,87 @@
 package tech.reliab.course.ChuvilkoIR.bank.service.impl;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import tech.reliab.course.ChuvilkoIR.bank.entity.Bank;
-import tech.reliab.course.ChuvilkoIR.bank.entity.BankOffice;
-import tech.reliab.course.ChuvilkoIR.bank.entity.Employee;
+import org.springframework.stereotype.Service;
+import tech.reliab.course.ChuvilkoIR.bank.model.request.EmployeeRequest;
+import tech.reliab.course.ChuvilkoIR.bank.model.dto.EmployeeDTO;
+import tech.reliab.course.ChuvilkoIR.bank.model.entity.Employee;
+import tech.reliab.course.ChuvilkoIR.bank.repository.EmployeeRepository;
+import tech.reliab.course.ChuvilkoIR.bank.service.BankOfficeService;
 import tech.reliab.course.ChuvilkoIR.bank.service.BankService;
 import tech.reliab.course.ChuvilkoIR.bank.service.EmployeeService;
 
+@Service
 @RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
-    private static int employeesCount = 0;
+    private final EmployeeRepository employeeRepository;
     private final BankService bankService;
-    private List<Employee> employees = new ArrayList<>();
+    private final BankOfficeService bankOfficeService;
 
-    public Employee createEmployee(String fullName, LocalDate birthDate, String position, Bank bank, boolean remoteWork,
-                                   BankOffice bankOffice, boolean canIssueLoans, double salary) {
-        Employee employee = new Employee(fullName, birthDate, position, bank, remoteWork,
-                bankOffice, canIssueLoans, salary);
-        employee.setId(employeesCount++);
-        employees.add(employee);
-        bankService.addEmployee(bank);
-        return employee;
+    /**
+     * Создание нового сотрудника банка.
+     *
+     * @param employeeRequest информация о сотруднике
+     * @return Созданный сотрудник банка.
+     */
+    public EmployeeDTO createEmployee(EmployeeRequest employeeRequest) {
+        Employee employee = new Employee(employeeRequest.getFullName(), employeeRequest.getBirthDate(),
+                employeeRequest.getPosition(), bankService.getBankById(employeeRequest.getBankId()),
+                employeeRequest.isRemoteWork(), bankOfficeService.getBankOfficeById(employeeRequest.getBankOfficeId()),
+                employeeRequest.isCanIssueLoans(), employeeRequest.getSalary());
+        return new EmployeeDTO(employeeRepository.save(employee));
     }
 
-    public Optional<Employee> getEmployeeById(int id) {
-        return employees.stream()
-                .filter(employee -> employee.getId() == id)
-                .findFirst();
+    /**
+     * Чтение сотрудника по его идентификатору.
+     *
+     * @param id Идентификатор сотрудника.
+     * @return Сотрудник, если он найден
+     * @throws NoSuchElementException Если сотрудник не найден.
+     */
+    public EmployeeDTO getEmployeeDTOById(long id) {
+        return new EmployeeDTO(getEmployeeById(id));
     }
 
-    public List<Employee> getAllEmployees() {
-        return new ArrayList<>(employees);
+    /**
+     * Чтение сотрудника по его идентификатору.
+     *
+     * @param id Идентификатор сотрудника.
+     * @return Сотрудник, если он найден
+     * @throws NoSuchElementException Если сотрудник не найден.
+     */
+    public Employee getEmployeeById(long id) {
+        return employeeRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Employee was not found"));
     }
 
-    public void updateEmployee(int id, String name) {
-        Employee employee = getEmployeeIfExists(id);
+    /**
+     * Чтение всех сотрудников.
+     *
+     * @return Список всех сотрудников.
+     */
+    public List<EmployeeDTO> getAllEmployees() {
+        return employeeRepository.findAll().stream().map(EmployeeDTO::new).toList();
+    }
+
+    /**
+     * Обновление информации о сотруднике по его идентификатору.
+     *
+     * @param id   Идентификатор сотрудника.
+     * @param name Новое имя сотрудника.
+     */
+    public EmployeeDTO updateEmployee(long id, String name) {
+        Employee employee = getEmployeeById(id);
         employee.setFullName(name);
+        return new EmployeeDTO(employeeRepository.save(employee));
     }
 
-    public void deleteEmployee(int id) {
-        employees.remove(getEmployeeIfExists(id));
-    }
-
-    public Employee getEmployeeIfExists(int id) {
-        return getEmployeeById(id).orElseThrow(() -> new NoSuchElementException("Employee was not found"));
+    /**
+     * Удаление сотрудника по его идентификатору.
+     *
+     * @param id Идентификатор сотрудника.
+     */
+    public void deleteEmployee(long id) {
+        employeeRepository.deleteById(id);
     }
 }
